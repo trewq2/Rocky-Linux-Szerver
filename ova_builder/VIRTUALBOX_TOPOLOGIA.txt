@@ -1,0 +1,28 @@
+VIRTUALBOX LABOR TOPOLÓGIA
+
+ROCKY LINUX 10.2 SERVER
+Adapter 1: NAT
+  - cél: internet a Rocky szervernek (dnf telepítés/frissítés)
+  - Rocky oldalon: DHCP
+
+Adapter 2: Internal Network
+  - hálózat neve: LABNET
+  - Rocky oldalon beállítandó: 192.168.50.1/24
+  - NINCS default gateway ezen az interfészen
+
+WINDOWS 7 x86 CLIENT
+Adapter 1: Internal Network
+  - hálózat neve: LABNET
+  - IP: DHCP-ből
+  - várható tartomány: 192.168.50.100–150
+  - DNS: 192.168.50.1
+
+LABOR NÉVTÉR
+DNS zóna: lab.test
+server.lab.test = 192.168.50.1
+www.lab.test    = 192.168.50.1
+ftp.lab.test    = 192.168.50.1
+
+FONTOS:
+A Windows 7 kliens ebben az alaplaborban nem kap internetet.
+A NAT a Rocky szerver csomagtelepítését szolgálja.
