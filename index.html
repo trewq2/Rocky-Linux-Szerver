@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rocky Linux 10.2 szerverlabor – VirtualBox</title>
+  <meta name="description" content="Rocky Linux 10.2 szerverlabor VirtualBox környezetben: NetworkManager, SSH/PuTTY, Kea DHCP, BIND DNS, vsftpd, Apache, firewalld, jogosultságok.">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="config.js"></script>
+  <script defer src="script.js"></script>
+</head>
+<body>
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Szerverek és felhőszolgáltatások • gyakorlati labor</div>
+      <h1>Rocky Linux 10.2<br>Szerverlabor</h1>
+      <p class="hero-sub">VirtualBox • Windows 7 • NetworkManager • SSH • Kea DHCP • BIND DNS • FTP • Apache • firewalld</p>
+      <p class="lead">Két előre elkészített virtuális gépből egy működő belső hálózati infrastruktúrát építesz. A feladat során nemcsak parancsokat másolsz: minden szolgáltatást Windows 7 kliensről tesztelsz, és K01–K30 képernyőképpel bizonyítod a munkádat.</p>
+      <div class="hero-buttons">
+        <a class="btn primary" href="#elokeszites">Gépek letöltése és indulás</a>
+        <a class="btn secondary" href="#modulok">Labor megkezdése</a>
+      </div>
+    </div>
+    <aside class="status-card">
+      <label>Név<input id="studentName" placeholder="Vezetéknév Keresztnév"></label>
+      <label>Osztály<input id="studentClass" placeholder="pl. 13.A"></label>
+      <div class="progress-label"><span>Modulok</span><strong id="progressLabel">0%</strong></div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="moduleCount">0 / 8 kész</div>
+      <div class="progress-label second"><span>Dokumentáció</span><strong id="evidenceCount">0 / 30</strong></div>
+      <button id="resetProgress" class="tiny">Mentett haladás törlése</button>
+    </aside>
+  </div>
+</header>
+
+<nav class="topnav"><div class="wrap nav-scroll">
+  <a href="#elokeszites">OVA + Word</a>
+  <a href="#topologia">Topológia</a>
+  <a href="#modulok">8 modul</a>
+  <a href="#zaro">Hibakeresés</a>
+  <a href="#bizonyitekok">K01–K30</a>
+  <a href="#ertekeles">Értékelés</a>
+</div></nav>
+
+<main class="wrap">
+<section id="elokeszites" class="section">
+  <div class="section-head"><span class="section-no">00</span><div><div class="kicker">Előkészített tanulói környezet</div><h2>OVA-k letöltése és dokumentáció</h2></div></div>
+  <div class="download-grid">
+    <article class="download-card server-dl">
+      <div class="download-icon">RL</div>
+      <div><h3 id="rockyTitle">Rocky Linux 10.2 RAW szerver OVA</h3><p>A labor kiinduló szervere. A szolgáltatások nincsenek előre megoldva.</p><div class="file-meta" id="rockyMeta"></div><a id="rockyDownload" class="btn primary small-btn" href="#">OVA letöltése</a><div class="sha" id="rockySha"></div></div>
+    </article>
+    <article class="download-card client-dl">
+      <div class="download-icon">W7</div>
+      <div><h3 id="windowsTitle">Windows 7 x86 kliens OVA</h3><p>A szerver szolgáltatásainak kliensoldali ellenőrzéséhez.</p><div class="file-meta" id="windowsMeta"></div><a id="windowsDownload" class="btn primary small-btn" href="#">OVA letöltése</a><div class="sha" id="windowsSha"></div></div>
+    </article>
+    <article class="download-card doc-dl">
+      <div class="download-icon">DOC</div>
+      <div><h3>Előre elkészített dokumentációs sablon</h3><p>K01–K30 képernyőképhely, rövid magyarázatmező és beadás előtti ellenőrzőlista.</p><a id="docDownload" class="btn primary small-btn" href="downloads/RockyLinux_10_2_Labor_Dokumentacio_Sablon.docx">Word-sablon letöltése</a></div>
+    </article>
+  </div>
+
+  <div class="notice warning"><strong>Tanulói szabály:</strong> az OVA-fájl nevét ne módosítsd, és a kiinduló gépen ne készíts saját hálózati „javítást” a feladat előtt. Ha a letöltéshez ellenőrzőösszeg van megadva, Windows alatt a <code>certutil -hashfile FÁJLNÉV.ova SHA256</code> paranccsal ellenőrizd.</div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Rocky OVA importálása</h3>
+      <ol class="student-steps">
+        <li>VirtualBox → <strong>File → Import Appliance</strong>.</li>
+        <li>Válaszd ki a Rocky Linux OVA-t.</li>
+        <li>Import után <strong>még ne indítsd el</strong>.</li>
+        <li>Settings → Network: Adapter 1 = <strong>NAT</strong>.</li>
+        <li>Adapter 2 = <strong>Internal Network</strong>, neve pontosan <code>LABNET</code>.</li>
+        <li>Mindkét adapteren legyen aktív a Cable Connected.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Windows 7 OVA importálása</h3>
+      <ol class="student-steps">
+        <li>File → Import Appliance → Windows 7 x86 OVA.</li>
+        <li>Settings → Network.</li>
+        <li>Adapter 1 = <strong>Internal Network</strong>.</li>
+        <li>Hálózat neve: <code>LABNET</code>.</li>
+        <li>A Windows kliensnek ebben a laborban nincs szüksége internetre.</li>
+        <li>A DHCP modulig ideiglenes statikus címet használunk.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="concept"><strong>Miért jó az OVA?</strong> Minden tanuló ugyanarról az ellenőrzött állapotról indul. Így az óra a szerverüzemeltetésről szól, nem az operációs rendszer telepítéséről. Az OVA ugyanakkor csak a kiindulópont: a DHCP, DNS, FTP, HTTP és jogosultsági feladatokat neked kell elkészítened.</div>
+</section>
+
+<section id="topologia" class="section">
+  <div class="section-head"><span class="section-no">01</span><div><div class="kicker">Laborhálózat</div><h2>Értsd meg a topológiát</h2></div></div>
+  <div class="topology">
+    <div class="node internet"><strong>Internet</strong><span>csak a Rocky szerver éri el</span></div>
+    <div class="arrow">↕ NAT</div>
+    <div class="node server"><strong>Rocky Linux 10.2</strong><span>NIC1: NAT / DHCP</span><span>NIC2: LABNET / 192.168.50.1/24</span></div>
+    <div class="arrow">↔ LABNET</div>
+    <div class="node client"><strong>Windows 7 x86</strong><span>Internal Network</span><span>IP: később DHCP-ből</span></div>
+  </div>
+  <div class="notice"><strong>Rocky 10 szabály:</strong> a régi <code>ifcfg-*</code>, <code>ifup</code>, <code>ifdown</code> módszerek helyett NetworkManagert használunk (<code>nmcli</code>/<code>nmtui</code>). DHCP-szerverként Kea-t használunk.</div>
+</section>
+
+<section id="modulok" class="section">
+  <div class="section-head"><span class="section-no">02</span><div><div class="kicker">8 × 45 perc</div><h2>Egymásra épülő gyakorlati modulok</h2></div></div>
+
+  <article class="module" data-module="1">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">1. modul • 45 perc • K01–K03</div><h3>Rendszerfelmérés és VirtualBox-hálózat</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> a NAT és az Internal Network két külön feladatot lát el. A NAT kifelé biztosít internetet a szervernek, az Internal Network pedig a Rocky és a Windows kliens izolált laborhálózata.</div>
+    <h4 class="step-title">1. Azonosítsd a Rocky rendszert</h4>
+    <div class="cmd" data-copy><code>cat /etc/rocky-release
+hostnamectl
+uname -r</code><button>Másolás</button></div>
+    <div class="expected"><strong>Akkor jó:</strong> Rocky Linux 10.2 látható.</div>
+    <h4 class="step-title">2. Keresd meg a hálózati interfészeket</h4>
+    <div class="cmd" data-copy><code>ip -br link
+ip -br address
+nmcli device status
+nmcli connection show</code><button>Másolás</button></div>
+    <p>A neveket ne feltételezd. Lehet például <code>enp0s3</code> és <code>enp0s8</code>, de mindig a saját géped kimenetét használd.</p>
+    <h4 class="step-title">3. NAT ellenőrzése</h4>
+    <div class="cmd" data-copy><code>ip route
+ping -c 3 1.1.1.1</code><button>Másolás</button></div>
+    <div class="evidence"><strong>K01:</strong> verzió + hostname • <strong>K02:</strong> két interfész • <strong>K03:</strong> sikeres NAT ping.</div>
+    <div class="mini-quiz" data-quiz="q1"></div>
+  </article>
+
+  <article class="module" data-module="2">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">2. modul • 45 perc • K04–K07</div><h3>Statikus LABNET IP, SSH és PuTTY</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> a szerver belső címe statikus, hogy a kliensek mindig ugyanazon az IP-n találják a DHCP/DNS/FTP/HTTP szolgáltatásokat.</div>
+    <h4 class="step-title">1. LABNET kapcsolat létrehozása</h4>
+    <p>Az <code>enp0s8</code> helyére a saját belső interfészed nevét írd.</p>
+    <div class="cmd" data-copy><code>sudo nmcli connection add type ethernet ifname enp0s8 con-name LABNET \
+  ipv4.method manual ipv4.addresses 192.168.50.1/24 \
+  ipv6.method disabled
+sudo nmcli connection modify LABNET connection.zone internal
+sudo nmcli connection up LABNET
+ip -br address
+ip route</code><button>Másolás</button></div>
+    <div class="expected"><strong>Akkor jó:</strong> a LABNET interfészen <code>192.168.50.1/24</code> van, külön default gateway nélkül.</div>
+    <h4 class="step-title">2. SSH és tűzfal</h4>
+    <div class="cmd" data-copy><code>sudo systemctl enable --now sshd
+sudo firewall-cmd --permanent --zone=internal --add-service=ssh
+sudo firewall-cmd --reload
+sudo firewall-cmd --zone=internal --list-all</code><button>Másolás</button></div>
+    <h4 class="step-title">3. Windows 7 ideiglenes címe</h4>
+    <ul class="kv"><li>IP: <code>192.168.50.10</code></li><li>Maszk: <code>255.255.255.0</code></li><li>Átjáró: üres</li><li>DNS: egyelőre üres</li></ul>
+    <div class="cmd" data-copy><code>ipconfig
+ping 192.168.50.1</code><button>Másolás</button></div>
+    <h4 class="step-title">4. PuTTY</h4>
+    <ol class="student-steps"><li>Host: <code>192.168.50.1</code>, port <code>22</code>, SSH.</li><li>Fogadd el az első host key figyelmeztetést.</li><li>Felhasználó: <code>student</code>; jelszó: a tanár adja meg.</li><li>Belépés után: <code>whoami</code>, <code>hostname</code>, <code>ip -br address</code>.</li></ol>
+    <div class="evidence"><strong>K04:</strong> LABNET IP • <strong>K05:</strong> Windows ping • <strong>K06:</strong> PuTTY login • <strong>K07:</strong> SSH firewalld.</div>
+    <div class="mini-quiz" data-quiz="q2"></div>
+  </article>
+
+  <article class="module" data-module="3">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">3. modul • 45 perc • K08–K11</div><h3>Felhasználók, csoportok és jogosultságok</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> a Linux fájlhozzáférést a tulajdonos, a csoport és az others jogai szabályozzák. Könyvtárnál az <code>x</code> a belépést/útvonalon áthaladást jelenti.</div>
+    <h4 class="step-title">1. Felhasználók és projekt csoport</h4>
+    <div class="cmd" data-copy><code>sudo groupadd projekt
+sudo useradd -m anna
+sudo useradd -m bela
+sudo useradd -m vendeg
+sudo usermod -aG projekt anna
+sudo usermod -aG projekt bela
+sudo passwd anna
+sudo passwd bela
+sudo passwd vendeg
+id anna
+id bela
+id vendeg</code><button>Másolás</button></div>
+    <h4 class="step-title">2. Labor könyvtárstruktúra</h4>
+    <div class="cmd" data-copy><code>sudo mkdir -p /srv/ftp/{anna,bela,kozos,nyilvanos}
+sudo chown root:root /srv/ftp && sudo chmod 755 /srv/ftp
+sudo chown anna:anna /srv/ftp/anna && sudo chmod 700 /srv/ftp/anna
+sudo chown bela:bela /srv/ftp/bela && sudo chmod 700 /srv/ftp/bela
+sudo chown root:projekt /srv/ftp/kozos && sudo chmod 2770 /srv/ftp/kozos
+sudo chown root:root /srv/ftp/nyilvanos && sudo chmod 755 /srv/ftp/nyilvanos</code><button>Másolás</button></div>
+    <h4 class="step-title">3. Jogok értelmezése</h4>
+    <div class="cmd" data-copy><code>ls -ld /srv/ftp /srv/ftp/*
+stat -c '%A %a %U %G %n' /srv/ftp/*
+namei -l /srv/ftp/kozos</code><button>Másolás</button></div>
+    <h4 class="step-title">4. Pozitív és negatív teszt</h4>
+    <div class="cmd" data-copy><code>sudo -u anna touch /srv/ftp/anna/anna.txt
+sudo -u anna touch /srv/ftp/kozos/anna-kozos.txt
+sudo -u bela touch /srv/ftp/kozos/bela-kozos.txt
+sudo -u vendeg touch /srv/ftp/kozos/vendeg.txt
+ls -l /srv/ftp/kozos</code><button>Másolás</button></div>
+    <div class="expected"><strong>Akkor jó:</strong> anna és bela írhat a közös mappába, vendeg pedig Permission denied hibát kap.</div>
+    <div class="evidence"><strong>K08:</strong> id • <strong>K09:</strong> jogosultságok • <strong>K10:</strong> tiltott írás • <strong>K11:</strong> setgid/projekt csoport.</div>
+    <div class="mini-quiz" data-quiz="q3"></div>
+  </article>
+
+  <article class="module" data-module="4">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">4. modul • 45 perc • K12–K15</div><h3>Kea DHCPv4 – automatikus Windows-cím</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> DHCP automatikusan ad IP-konfigurációt a kliensnek. Rocky Linux 10-ben a Kea váltotta a régi ISC DHCP szervert.</div>
+    <h4 class="step-title">1. Telepítés</h4>
+    <div class="cmd" data-copy><code>sudo dnf -y install kea
+rpm -q kea
+sudo cp /etc/kea/kea-dhcp4.conf /etc/kea/kea-dhcp4.conf.orig</code><button>Másolás</button></div>
+    <h4 class="step-title">2. /etc/kea/kea-dhcp4.conf</h4>
+    <div class="cmd large" data-copy><code>{
+  "Dhcp4": {
+    "interfaces-config": { "interfaces": [ "enp0s8" ] },
+    "valid-lifetime": 3600,
+    "renew-timer": 900,
+    "rebind-timer": 1800,
+    "option-data": [
+      { "name": "domain-name", "data": "lab.test" },
+      { "name": "domain-name-servers", "data": "192.168.50.1" }
+    ],
+    "subnet4": [
+      {
+        "id": 1,
+        "subnet": "192.168.50.0/24",
+        "pools": [ { "pool": "192.168.50.100 - 192.168.50.150" } ]
+      }
+    ]
+  }
+}</code><button>Másolás</button></div>
+    <p><strong>Fontos:</strong> az <code>enp0s8</code> helyére a saját LABNET interfészed neve kerüljön.</p>
+    <h4 class="step-title">3. Ellenőrzés, tűzfal, indítás</h4>
+    <div class="cmd" data-copy><code>sudo kea-dhcp4 -t /etc/kea/kea-dhcp4.conf
+sudo firewall-cmd --permanent --zone=internal --add-service=dhcp
+sudo firewall-cmd --reload
+sudo systemctl enable --now kea-dhcp4
+sudo systemctl status kea-dhcp4 --no-pager</code><button>Másolás</button></div>
+    <h4 class="step-title">4. Windows 7 vissza DHCP-re</h4>
+    <p>IPv4: IP és DNS automatikus, majd CMD:</p>
+    <div class="cmd" data-copy><code>ipconfig /release
+ipconfig /renew
+ipconfig /all</code><button>Másolás</button></div>
+    <div class="trouble"><strong>169.254.x.x?</strong> A Windows nem kapott DHCP-választ. Vizsgáld: LABNET név, Kea interfésznév, szolgáltatás állapota és firewalld.</div>
+    <div class="evidence"><strong>K12:</strong> syntax check • <strong>K13:</strong> active Kea • <strong>K14:</strong> DHCP-s Windows • <strong>K15:</strong> Kea napló.</div>
+    <div class="mini-quiz" data-quiz="q4"></div>
+  </article>
+
+  <article class="module" data-module="5">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">5. modul • 45 perc • K16–K19</div><h3>BIND DNS – saját belső névtér</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> a DNS név és IP-cím között teremt kapcsolatot. A forward zóna A rekordokat, a reverse zóna PTR rekordokat használ.</div>
+    <h4 class="step-title">1. Telepítés</h4>
+    <div class="cmd" data-copy><code>sudo dnf -y install bind bind-utils
+sudo cp /etc/named.conf /etc/named.conf.orig</code><button>Másolás</button></div>
+    <h4 class="step-title">2. /etc/named.conf – options releváns beállításai</h4>
+    <div class="cmd large" data-copy><code>listen-on port 53 { 127.0.0.1; 192.168.50.1; };
+allow-query { localhost; 192.168.50.0/24; };
+recursion yes;
+forwarders { 1.1.1.1; 8.8.8.8; };</code><button>Másolás</button></div>
+    <h4 class="step-title">3. Zónák</h4>
+    <p>Az <code>/etc/named.rfc1912.zones</code> végére:</p>
+    <div class="cmd large" data-copy><code>zone "lab.test" IN {
+    type master;
+    file "lab.test.zone";
+    allow-update { none; };
+};
+
+zone "50.168.192.in-addr.arpa" IN {
+    type master;
+    file "50.168.192.rev";
+    allow-update { none; };
+};</code><button>Másolás</button></div>
+    <h4 class="step-title">4. Forward zóna: /var/named/lab.test.zone</h4>
+    <div class="cmd large" data-copy><code>$TTL 1H
+@   IN SOA server.lab.test. admin.lab.test. (
+        2026101601 1H 15M 1W 1H )
+    IN NS server.lab.test.
+server  IN A 192.168.50.1
+www     IN A 192.168.50.1
+ftp     IN A 192.168.50.1</code><button>Másolás</button></div>
+    <h4 class="step-title">5. Reverse zóna: /var/named/50.168.192.rev</h4>
+    <div class="cmd large" data-copy><code>$TTL 1H
+@   IN SOA server.lab.test. admin.lab.test. (
+        2026101601 1H 15M 1W 1H )
+    IN NS server.lab.test.
+1   IN PTR server.lab.test.</code><button>Másolás</button></div>
+    <h4 class="step-title">6. Jogok, ellenőrzés, indítás</h4>
+    <div class="cmd" data-copy><code>sudo chown root:named /var/named/lab.test.zone /var/named/50.168.192.rev
+sudo chmod 640 /var/named/lab.test.zone /var/named/50.168.192.rev
+sudo restorecon -v /var/named/lab.test.zone /var/named/50.168.192.rev
+sudo named-checkconf
+sudo named-checkzone lab.test /var/named/lab.test.zone
+sudo named-checkzone 50.168.192.in-addr.arpa /var/named/50.168.192.rev
+sudo firewall-cmd --permanent --zone=internal --add-service=dns
+sudo firewall-cmd --reload
+sudo systemctl enable --now named</code><button>Másolás</button></div>
+    <h4 class="step-title">7. Teszt</h4>
+    <div class="cmd" data-copy><code>dig @192.168.50.1 www.lab.test +short
+dig @192.168.50.1 -x 192.168.50.1 +short</code><button>Másolás</button></div>
+    <p>Windows 7:</p>
+    <div class="cmd" data-copy><code>ipconfig /flushdns
+nslookup server.lab.test
+nslookup www.lab.test
+nslookup ftp.lab.test
+ping server.lab.test</code><button>Másolás</button></div>
+    <div class="evidence"><strong>K16:</strong> named-check • <strong>K17:</strong> dig • <strong>K18:</strong> nslookup • <strong>K19:</strong> név szerinti ping.</div>
+    <div class="mini-quiz" data-quiz="q5"></div>
+  </article>
+
+  <article class="module" data-module="6">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">6. modul • 45 perc • K20–K24</div><h3>vsftpd – FTP és valódi jogosultságteszt</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> az FTP itt oktatási célú, izolált LABNET hálózaton fut. Azért használjuk, mert jól láthatóvá teszi, hogyan érvényesülnek hálózaton keresztül a Linux user/group/others jogosultságok. Éles környezetben inkább SFTP-t használunk.</div>
+    <h4 class="step-title">1. Telepítés és mentés</h4>
+    <div class="cmd" data-copy><code>sudo dnf -y install vsftpd
+sudo cp /etc/vsftpd/vsftpd.conf /etc/vsftpd/vsftpd.conf.orig</code><button>Másolás</button></div>
+    <h4 class="step-title">2. /etc/vsftpd/vsftpd.conf</h4>
+    <div class="cmd large" data-copy><code>listen=YES
+listen_ipv6=NO
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=002
+dirmessage_enable=YES
+use_localtime=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+chroot_local_user=YES
+local_root=/srv/ftp
+pasv_enable=YES
+pasv_min_port=30000
+pasv_max_port=30100
+pam_service_name=vsftpd
+userlist_enable=YES</code><button>Másolás</button></div>
+    <h4 class="step-title">3. SELinux laborbeállítás</h4>
+    <div class="cmd" data-copy><code>getenforce
+getsebool -a | grep ftpd
+sudo setsebool -P ftpd_full_access on
+getsebool ftpd_full_access</code><button>Másolás</button></div>
+    <div class="notice warning"><strong>Oktatási kompromisszum:</strong> ebben a zárt laborban az FTP-hozzáférést elsősorban a Unix jogosultságok vizsgálatához egyszerűsítjük. SELinux maradjon Enforcing módban.</div>
+    <h4 class="step-title">4. Tűzfal és szolgáltatás</h4>
+    <div class="cmd" data-copy><code>sudo firewall-cmd --permanent --zone=internal --add-service=ftp
+sudo firewall-cmd --permanent --zone=internal --add-port=30000-30100/tcp
+sudo firewall-cmd --reload
+sudo systemctl enable --now vsftpd
+sudo systemctl status vsftpd --no-pager
+sudo ss -lntp | grep :21</code><button>Másolás</button></div>
+    <h4 class="step-title">5. Windows FTP – anna</h4>
+    <p>Hozz létre az Asztalon egy <code>anna-win.txt</code> fájlt.</p>
+    <div class="cmd" data-copy><code>ftp ftp.lab.test</code><button>Másolás</button></div>
+    <p>Az FTP promptban:</p>
+    <div class="cmd" data-copy><code>dir
+cd anna
+put anna-win.txt
+cd ..
+cd kozos
+put anna-win.txt
+cd ..
+cd bela
+quit</code><button>Másolás</button></div>
+    <div class="expected"><strong>Akkor jó:</strong> anna saját és közös mappába írhat, bela mappájába nem.</div>
+    <h4 class="step-title">6. vendeg negatív teszt + Rocky ellenőrzés</h4>
+    <p>vendeg a nyilvános tartalmat olvashatja, a közös mappába viszont ne tudjon írni.</p>
+    <div class="cmd" data-copy><code>sudo find /srv/ftp -maxdepth 2 -type f -printf '%M %u %g %p\n'
+sudo journalctl -u vsftpd --since "15 minutes ago" --no-pager</code><button>Másolás</button></div>
+    <div class="evidence"><strong>K20:</strong> vsftpd/21 • <strong>K21:</strong> anna saját • <strong>K22:</strong> anna közös • <strong>K23:</strong> tiltás • <strong>K24:</strong> tulajdonos/csoport.</div>
+    <div class="mini-quiz" data-quiz="q6"></div>
+  </article>
+
+  <article class="module" data-module="7">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">7. modul • 45 perc • K25–K27</div><h3>Apache webszolgáltatás és saját státuszoldal</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> az Apache HTTP Server a 80/TCP porton szolgál ki tartalmat. A DNS miatt a kliens az IP helyett a <code>www.lab.test</code> nevet használhatja.</div>
+    <h4 class="step-title">1. Telepítés és tűzfal</h4>
+    <div class="cmd" data-copy><code>sudo dnf -y install httpd
+sudo systemctl enable --now httpd
+sudo firewall-cmd --permanent --zone=internal --add-service=http
+sudo firewall-cmd --reload
+sudo systemctl status httpd --no-pager</code><button>Másolás</button></div>
+    <h4 class="step-title">2. Saját oldal: /var/www/html/index.html</h4>
+    <div class="cmd large" data-copy><code>&lt;!doctype html&gt;
+&lt;html lang="hu"&gt;
+&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;title&gt;Rocky Linux labor&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Rocky Linux 10.2 szerverlabor&lt;/h1&gt;
+  &lt;p&gt;Készítette: SAJÁT NÉV&lt;/p&gt;
+  &lt;ul&gt;
+    &lt;li&gt;DHCP – Kea&lt;/li&gt;
+    &lt;li&gt;DNS – BIND&lt;/li&gt;
+    &lt;li&gt;FTP – vsftpd&lt;/li&gt;
+    &lt;li&gt;SSH – OpenSSH&lt;/li&gt;
+    &lt;li&gt;HTTP – Apache&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/body&gt;&lt;/html&gt;</code><button>Másolás</button></div>
+    <h4 class="step-title">3. Rocky + Windows ellenőrzés</h4>
+    <div class="cmd" data-copy><code>curl http://127.0.0.1
+curl http://www.lab.test</code><button>Másolás</button></div>
+    <div class="urlbox">http://www.lab.test</div>
+    <div class="evidence"><strong>K25:</strong> Apache active • <strong>K26:</strong> curl • <strong>K27:</strong> Windows böngésző.</div>
+    <div class="mini-quiz" data-quiz="q7"></div>
+  </article>
+
+  <article class="module" data-module="8">
+    <div class="module-head"><label class="module-check"><input type="checkbox"><span></span></label><div><div class="module-meta">8. modul • 45 perc • K28–K30</div><h3>firewalld, hibakísérlet és integrált ellenőrzés</h3></div></div>
+    <div class="concept"><strong>Elmélet:</strong> attól, hogy egy daemon fut, a kliens még nem biztos, hogy eléri. A teljes útvonal: kliens → IP/hálózat → DNS → tűzfal → hallgató port → daemon → alkalmazás.</div>
+    <h4 class="step-title">1. Végleges internal zóna</h4>
+    <div class="cmd" data-copy><code>sudo firewall-cmd --get-active-zones
+sudo firewall-cmd --zone=internal --list-all</code><button>Másolás</button></div>
+    <p>Várható szolgáltatások: <code>ssh dhcp dns ftp http</code>, továbbá FTP passzív portok: <code>30000-30100/tcp</code>.</p>
+    <h4 class="step-title">2. Tudatos HTTP hibakísérlet</h4>
+    <div class="cmd" data-copy><code>sudo firewall-cmd --zone=internal --remove-service=http</code><button>Másolás</button></div>
+    <p>Windows böngészőben frissítsd a weboldalt: most ne legyen elérhető. Ezután:</p>
+    <div class="cmd" data-copy><code>sudo firewall-cmd --zone=internal --add-service=http</code><button>Másolás</button></div>
+    <p>Frissíts újra: működjön.</p>
+    <h4 class="step-title">3. Szolgáltatás- és portellenőrzés</h4>
+    <div class="cmd" data-copy><code>systemctl --no-pager --type=service --state=running | grep -E 'sshd|kea-dhcp4|named|vsftpd|httpd'
+sudo ss -lntup | grep -E ':22|:21|:53|:67|:80'</code><button>Másolás</button></div>
+    <h4 class="step-title">4. Végső Windows teszt</h4>
+    <div class="cmd" data-copy><code>ipconfig /all
+ping server.lab.test
+nslookup www.lab.test
+nslookup ftp.lab.test</code><button>Másolás</button></div>
+    <ul class="ticks"><li>PuTTY → <code>server.lab.test</code></li><li>FTP → <code>ftp.lab.test</code></li><li>Böngésző → <code>http://www.lab.test</code></li></ul>
+    <h4 class="step-title">5. Hibakeresési sorrend</h4>
+    <div class="diag"><span>1. IP?</span><b>→</b><span>2. Ping?</span><b>→</b><span>3. DNS?</span><b>→</b><span>4. active?</span><b>→</b><span>5. port?</span><b>→</b><span>6. tűzfal?</span><b>→</b><span>7. log?</span></div>
+    <div class="evidence"><strong>K28:</strong> teljes firewalld • <strong>K29:</strong> HTTP tiltás/visszaállítás • <strong>K30:</strong> integrált Windows teszt.</div>
+    <div class="mini-quiz" data-quiz="q8"></div>
+  </article>
+</section>
+
+<section id="zaro" class="section">
+  <div class="section-head"><span class="section-no">03</span><div><div class="kicker">Opcionális +45 perc</div><h2>Rendszergazda átvétel – hibakeresési kihívás</h2></div></div>
+  <div class="final-card">
+    <p>A tanár egyetlen hibát hoz létre a rendszerben. Nem újratelepíteni kell, hanem diagnosztizálni.</p>
+    <div class="grid2"><div><h3>Lehetséges hibák</h3><ul class="ticks"><li>rossz LABNET cím;</li><li>Kea rossz interfészen figyel;</li><li>hibás DNS A rekord;</li><li>HTTP tűzfal tiltás;</li><li>FTP jogosultság elrontva;</li><li>egy daemon leállítva.</li></ul></div><div><h3>Mini hibajegy</h3><ol><li>Mi volt a tünet?</li><li>Mivel vizsgáltad?</li><li>Mi volt a gyökérok?</li><li>Mit javítottál?</li><li>Hogyan bizonyítottad?</li></ol></div></div>
+  </div>
+</section>
+
+<section id="bizonyitekok" class="section">
+  <div class="section-head"><span class="section-no">04</span><div><div class="kicker">Beadandó dokumentáció</div><h2>K01–K30 képernyőkép</h2></div></div>
+  <div class="submit-grid">
+    <div class="card"><h3>Haladási lista</h3><p class="small">A pipa a böngésződben mentődik. Akkor jelöld késznek, ha a kép már bekerült a Word-sablonba is.</p><div id="evidenceChecklist"></div></div>
+    <div class="card sticky-card"><h3>Javasolt munkafolyamat</h3><ol class="student-steps"><li>Töltsd le a Word-sablont.</li><li>Mentsd el saját néven.</li><li>Minden KXX pontnál készíts képet.</li><li>A megfelelő KXX helyőrzőhöz illeszd be.</li><li>Írj alá 1–2 mondatos magyarázatot.</li><li>A végén Word → Mentés másként / Export → PDF.</li></ol><a class="btn primary block" href="downloads/RockyLinux_10_2_Labor_Dokumentacio_Sablon.docx">Word-sablon letöltése</a><div class="filename">Vezeteknev_Keresztnev_RockyLinux_Labor.pdf</div></div>
+  </div>
+</section>
+
+<section id="ertekeles" class="section">
+  <div class="section-head"><span class="section-no">05</span><div><div class="kicker">100 pont</div><h2>Értékelés</h2></div></div>
+  <div class="score-table"><table><thead><tr><th>Terület</th><th>Pont</th></tr></thead><tbody>
+    <tr><td>VirtualBox/topológia/rendszerfelmérés</td><td>8</td></tr><tr><td>Hálózat + SSH/PuTTY</td><td>14</td></tr><tr><td>Felhasználók, csoportok, jogosultságok</td><td>16</td></tr><tr><td>Kea DHCP</td><td>14</td></tr><tr><td>BIND DNS</td><td>14</td></tr><tr><td>FTP + jogosultságteszt</td><td>14</td></tr><tr><td>Apache web</td><td>10</td></tr><tr><td>firewalld + integrált ellenőrzés</td><td>6</td></tr><tr><td>Dokumentáció</td><td>4</td></tr><tr class="total"><td>Összesen</td><td>100</td></tr>
+  </tbody></table></div>
+</section>
+</main>
+<footer><div class="wrap">Rocky Linux 10.2 szerverlabor • VirtualBox • tanulói GitHub Pages felület</div></footer>
+</body>
+</html>
